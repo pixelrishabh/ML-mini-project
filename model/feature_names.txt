@@ -1,0 +1,18 @@
+high_school_gpa
+entrance_exam_score
+course_load
+attendance_rate
+weekly_study_hours
+class_participation
+assignment_submission_rate
+extracurricular_hours
+daily_sleep_hours
+part_time_work_hours
+commute_time_minutes
+screen_time_hours
+major_Business
+major_Engineering
+major_Science
+major_Social Science
+family_income_level_Low
+family_income_level_Middle

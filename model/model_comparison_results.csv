@@ -1,0 +1,5 @@
+Model,R2 (test),MAE (test),RMSE (test),CV R2 (mean),CV R2 (std)
+Lasso Regression,0.7359,0.2872,0.3581,0.7412,0.0327
+Linear Regression,0.735,0.2839,0.3588,0.7428,0.031
+Ridge Regression,0.735,0.2839,0.3587,0.7428,0.0311
+Random Forest Regressor,0.658,0.328,0.4075,0.6401,0.0397
