@@ -1,274 +1,204 @@
-# Student Performance & CGPA Prediction System 🎓📊
+# Student Academic Performance Analysis & Prediction System 🎓📊
 
 [![React](https://img.shields.io/badge/Frontend-React_19_+_Vite-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![TailwindCSS](https://img.shields.io/badge/Styling-Tailwind_CSS-38B2AC?logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![Node.js](https://img.shields.io/badge/Backend-Node.js_+_Express-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![MongoDB](https://img.shields.io/badge/Database-MongoDB_+_Mongoose-47A248?logo=mongodb&logoColor=white)](https://www.mongodb.com/)
 [![Python](https://img.shields.io/badge/ML-Python_3_+_Scikit--Learn-3776AB?logo=python&logoColor=white)](https://scikit-learn.org/)
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![SHAP](https://img.shields.io/badge/Explainability-SHAP_TreeExplainer-ff69b4)](https://shap.readthedocs.io/)
+[![Fairness](https://img.shields.io/badge/Ethics-Demographic_Fairness_Audit-8A2BE2)](https://doi.org/10.3390/app15158409)
 
-An end-to-end Machine Learning and Full-Stack web application designed to forecast university students' academic performance and Cumulative Grade Point Average (**CGPA on a 0.0 – 10.0 scale**). Built using a high-performance **MERN** architecture coupled with an advanced **Scikit-Learn Regression Pipeline**.
-
----
-
-## 🌟 Key Highlights
-
-- **Predictive ML Intelligence**: Multi-regression algorithm benchmark comparing Linear, Ridge, Lasso, and Random Forest models with 5-fold cross-validation.
-- **Full-Stack MERN Architecture**: Seamlessly connects a React 19 + Vite client to an Express.js REST API with resilient MongoDB persistence.
-- **Zero-Downtime Fallback**: If MongoDB or local Python environments are temporarily offline, the backend gracefully switches to in-memory history storage and verified deterministic fallback estimation.
-- **Dynamic UI/UX**: Responsive interface styled with modern Tailwind CSS, Lucide icons, dark/light theme switching, and real-time form validation.
-- **Academic Project Deliverables**: Includes pre-generated diagnostic plots, model comparison charts, presentation slide deck (`miniproject ppt.pptx`), and formal project report (`Synopsis Report ml.docx`).
+A production-grade Machine Learning and Full-Stack web application designed to forecast secondary school students' final academic performance (**Final Grade G3 on the authentic 0.0 – 20.0 Portuguese grading scale**). Built using the **UCI Student Performance Dataset**, a unified **Scikit-Learn Pipeline** (`ColumnTransformer` + candidate regressors), real-time **SHAP local feature attribution**, and a transparent **demographic fairness and error disparity audit** inspired by recent research in *Applied Sciences* (2025).
 
 ---
 
-## 📁 Repository Structure
+## 🌟 Key Upgrades & Architecture Highlights
+
+1. **Authentic UCI Student Performance Dataset**:
+   - Primary experiment trains on the authentic `student-por.csv` (Portuguese Language Course, 649 records, 33 attributes, 0 null values, 0 duplicates).
+   - Target variable: **Final Grade G3** on the official Portuguese 0–20 scale ($<10$: Fail / Insuficiente, $10-11$: Pass / Suficiente, $12-13$: Satisfactory, $14-15$: Good / Bom, $16-20$: Excellent / Muito Bom).
+2. **Two Isolated Experiments (Target Leakage Prevention)**:
+   - **Primary (Early Warning Prediction)**: Predicts final grade G3 using habits, parental background, support systems, and absences *prior to period exams*, strictly excluding $G1$ and $G2$ to eliminate target leakage.
+   - **Secondary (Mid-Semester Monitoring)**: Incorporates $G1$ and $G2$ to demonstrate continuous semester monitoring, where earlier grades dominate ($R^2 \approx 0.84$, $\text{MAE} \approx 0.73$).
+3. **Reproducible ML Pipeline (`ColumnTransformer` + Pipeline)**:
+   - 5-fold cross-validation on training folds (80% split) across **Linear Regression**, **Ridge Regression**, **Random Forest Regressor**, and **Gradient Boosting Regressor**.
+   - Hyperparameter selection via cross-validation, evaluated once on an independent held-out test cohort (130 records).
+4. **SHAP Explainability**:
+   - Integrated TreeExplainer calculating global feature importance (mean absolute SHAP values) and local individual prediction attributions (features pushing predictions higher or lower).
+5. **Transparent Fairness & Error Audit**:
+   - Evaluates subgroup MAE, RMSE, sample sufficiency, and directional signed prediction bias across **Gender** (`sex`: F vs M), **Residential Location** (`address`: U vs R), and **School** (`school`: GP vs MS).
+   - Sensitive demographic variables are separated from the primary feature pipeline to avoid disparate treatment.
+6. **Robust Full-Stack MERN Architecture**:
+   - Express backend with strict input schema validation, zero handcrafted mathematical fallbacks, diagnostic error handling, and live MongoDB persistence with transparent in-memory session status reporting.
+   - React 19 frontend with 4 responsive navigation tabs: *Prediction Studio*, *Model Benchmarks*, *Fairness Audit*, and *Dataset Documentation*.
+
+---
+
+## 📊 Held-Out Test Set Performance & Evaluation Results
+
+All candidate models were tuned using 5-fold cross-validation on 519 training records and evaluated once on the 130 held-out test records:
+
+### Primary Experiment: Early Prediction (Excluding G1 & G2)
+| Candidate Model | 5-Fold CV MAE | 5-Fold CV RMSE | 5-Fold CV R² | Held-Out Test MAE | Held-Out Test RMSE | Held-Out Test R² | Status |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| **Random Forest Regressor** | **2.009** | **2.729** | **0.265** | **2.046** | **2.820** | **0.185** | **Selected Best** |
+| Gradient Boosting Regressor | 2.108 | 2.843 | 0.195 | 2.101 | 2.807 | 0.192 | Candidate |
+| Ridge Regression (alpha=2.0) | 2.072 | 2.852 | 0.191 | 2.130 | 2.860 | 0.161 | Candidate |
+| Linear Regression | 2.084 | 2.861 | 0.186 | 2.146 | 2.873 | 0.153 | Candidate |
+
+### Secondary Experiment: Later Monitoring (With G1 & G2)
+| Candidate Model | 5-Fold CV MAE | 5-Fold CV RMSE | 5-Fold CV R² | Held-Out Test MAE | Held-Out Test RMSE | Held-Out Test R² | Status |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
+| **Gradient Boosting Regressor** | **0.838** | **1.288** | **0.834** | **0.731** | **1.253** | **0.839** | **Selected Best** |
+| Random Forest Regressor | 0.845 | 1.308 | 0.828 | 0.772 | 1.280 | 0.832 | Candidate |
+| Ridge Regression | 0.881 | 1.335 | 0.825 | 0.758 | 1.259 | 0.837 | Candidate |
+| Linear Regression | 0.886 | 1.340 | 0.824 | 0.761 | 1.265 | 0.836 | Candidate |
+
+---
+
+## ⚖️ Demographic Fairness Audit Summary (Held-Out Test Set)
+
+Inspired by: *Beyond Performance: Explaining and Ensuring Fairness in Student Academic Performance Prediction with Machine Learning* (Applied Sciences, 2025, DOI: [10.3390/app15158409](https://doi.org/10.3390/app15158409)).
+
+| Demographic Category | Subgroup | Sample Size ($N$) | Data Sufficiency | Subgroup MAE | Mean Actual Grade | Mean Pred Grade | Signed Bias ($\bar{\hat{y}} - \bar{y}$) | Disparity Ratio |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Gender (`sex`)** | Female (F) | 89 | Adequate ($N \ge 25$) | 2.051 | 12.75 | 12.19 | -0.559 (Underpredicting) | **1.008x** |
+| | Male (M) | 41 | Adequate ($N \ge 25$) | 2.035 | 11.49 | 11.77 | +0.283 (Overpredicting) | |
+| **Address (`address`)** | Urban (U) | 94 | Adequate ($N \ge 25$) | 2.003 | 12.65 | 12.32 | -0.333 (Underpredicting) | **1.078x** |
+| | Rural (R) | 36 | Adequate ($N \ge 25$) | 2.159 | 11.61 | 11.42 | -0.190 (Underpredicting) | |
+| **School (`school`)** | Gabriel Pereira (GP) | 87 | Adequate ($N \ge 25$) | 1.727 | 13.01 | 12.59 | -0.420 (Underpredicting) | **1.558x** |
+| | Mousinho da Silveira (MS) | 43 | Adequate ($N \ge 25$) | 2.691 | 11.05 | 11.01 | -0.037 (Calibrated) | |
+
+---
+
+## 📁 Repository Directory Structure
 
 ```text
-ML-mini-project/
+ml_model/
+├── data/
+│   └── raw/
+│       ├── student-por.csv              # Authentic UCI Portuguese dataset (649 records)
+│       ├── student-mat.csv              # UCI Math dataset (reference)
+│       └── student.txt                  # Official feature dictionary & citation notes
+│
+├── model/                               # Reproducible Machine Learning Suite
+│   ├── student_model_pipeline.py        # Complete training, CV, export & audit pipeline
+│   ├── predict.py                       # CLI & programmatic inference with local SHAP
+│   ├── preprocessing_module.py          # Data cleaning & ColumnTransformer routines
+│   ├── testing_module.py                # Standalone model comparison harness
+│   ├── best_student_pipeline.joblib     # Exported scikit-learn Early Prediction pipeline
+│   ├── later_student_pipeline.joblib    # Exported scikit-learn Later Prediction pipeline
+│   ├── model_metadata.json              # Versioned evaluation benchmarks, CV, SHAP & audit
+│   ├── requirements.txt                 # Model dependency manifest (scikit-learn, shap, etc.)
+│   └── plots/                           # Publication-grade diagnostic charts
+│       ├── model_comparison_early_prediction.png
+│       ├── actual_vs_predicted_early_prediction.png
+│       └── shap_importance_early_prediction.png
+│
 ├── backend/                             # Express.js REST API Server
 │   ├── config/
-│   │   └── db.js                        # MongoDB Mongoose connection + memory store fallback
+│   │   └── db.js                        # Mongoose connection + session status warning
 │   ├── controllers/
-│   │   └── predictionController.js      # Validation, child-process ML runner & CRUD
+│   │   └── predictionController.js      # Input validation, Python spawn, metadata & CRUD
 │   ├── models/
-│   │   └── Prediction.js                # Schema definition for student prediction logs
+│   │   └── Prediction.js                # Schema for UCI student attributes & G3 (0-20)
 │   ├── routes/
-│   │   └── predictionRoutes.js          # REST endpoints (/api/predictions, /api/predict)
+│   │   └── predictionRoutes.js          # REST endpoints (/api/predictions, /api/model/metadata)
 │   ├── package.json
-│   └── server.js                        # Backend entrypoint (Port 5000)
+│   └── server.js                        # Express server entrypoint (Port 5000)
 │
-├── frontend/                            # Modern React SPA (Vite + Tailwind CSS)
-│   ├── public/                          # Static assets and icons
+├── frontend/                            # Modern React 19 Client (Vite + Tailwind CSS)
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── Hero.jsx                 # Intro header & system overview
-│   │   │   ├── Navbar.jsx               # Branding and theme switch
-│   │   │   ├── PredictionForm.jsx       # Multi-input form with input validation
-│   │   │   ├── ResultCard.jsx           # Animated predicted CGPA & performance badge
-│   │   │   └── PredictionsHistory.jsx   # Live history table with delete & refresh actions
-│   │   ├── context/
-│   │   │   └── ThemeContext.jsx         # Dark / Light theme provider
+│   │   │   ├── Navbar.jsx               # Tabs & MongoDB persistence status indicator
+│   │   │   ├── PredictionForm.jsx       # Validated form with presets & early/later toggle
+│   │   │   ├── ResultCard.jsx           # 0-20 score, grade tier, local SHAP attribution
+│   │   │   ├── ModelDiagnostics.jsx     # Live CV benchmark table & global SHAP chart
+│   │   │   ├── FairnessAudit.jsx        # Subgroup disparity tables & ethical discussion
+│   │   │   ├── DatasetInfo.jsx          # UCI dataset citation & feature definitions
+│   │   │   └── PredictionsHistory.jsx   # Prediction logs with session/MongoDB status
 │   │   ├── App.jsx                      # Main app shell & API orchestration
-│   │   ├── index.css                    # Tailwind CSS directives and base styling
-│   │   └── main.jsx                     # Application bootstrap
-│   ├── index.html
-│   ├── vite.config.js                   # Client dev server configuration (Port 3000)
+│   │   └── index.css                    # Tailwind CSS directives
 │   └── package.json
 │
-├── model/                               # Python Machine Learning Suite
-│   ├── student_model_pipeline.py        # Complete training, evaluation & export pipeline
-│   ├── preprocessing_module.py          # Data cleaning, encoding & feature scaling routines
-│   ├── testing_module.py                # Standalone test runner and metric calculation
-│   ├── predict.py                       # Lightweight CLI & programmatic inference script
-│   ├── generate_ppt_graphs.py           # Presentation graph generator
-│   ├── model.pkl                        # Serialized best-performing regression model
-│   ├── scaler.pkl                       # Serialized StandardScaler artifact
-│   ├── feature_names.txt                # Exported feature schema
-│   ├── synthetic_cgpa_data.csv          # Comprehensive training dataset
-│   ├── demo_student_data.csv            # Sample evaluation records
-│   ├── model_comparison_results.csv     # Benchmark metrics across models
-│   ├── requirements.txt                 # Python dependencies
-│   └── *.png                            # Diagnostic & performance evaluation plots
+├── tests/                               # Automated Test Suites
+│   ├── test_pipeline.py                 # Python unit tests (8 tests: data, ML, SHAP, fairness)
+│   └── test_backend.js                  # Node.js integration tests (17 tests: API, validation, CRUD)
 │
-├── Synopsis Report ml.docx              # Complete project synopsis report
-├── miniproject ppt.pptx                  # Project presentation slides
-├── .gitignore                           # Git ignore specification
-└── README.md                            # Comprehensive project documentation
+├── preprocessing_module.py              # Root preprocessing wrapper
+├── testing_module.py                    # Root testing wrapper
+└── README.md
 ```
 
 ---
 
-## 🤖 Machine Learning Model & Performance
-
-The pipeline evaluates multiple regression models on synthetic academic performance distributions calibrated to standard university grading metrics.
-
-### Model Benchmark Comparison
-
-| Model | $R^2$ (Test) | MAE (Test) | RMSE (Test) | 5-Fold CV $R^2$ (Mean) | 5-Fold CV $R^2$ (Std) |
-|---|:---:|:---:|:---:|:---:|:---:|
-| **Lasso Regression** | **0.7359** | **0.2872** | **0.3581** | **0.7412** | $\pm 0.0327$ |
-| **Linear Regression** | 0.7350 | 0.2839 | 0.3588 | 0.7428 | $\pm 0.0310$ |
-| **Ridge Regression** | 0.7350 | 0.2839 | 0.3587 | 0.7428 | $\pm 0.0311$ |
-| **Random Forest Regressor** | 0.6580 | 0.3280 | 0.4075 | 0.6401 | $\pm 0.0397$ |
-
-### Grading & Categorization Scale
-
-| Predicted CGPA | Letter Grade | Performance Category | Academic Remark |
-|:---:|:---:|:---:|---|
-| **9.0 – 10.0** | `A+` | Outstanding | Dean's List / Distinction |
-| **8.0 – 8.9** | `A` | Strong | First Class with Distinction |
-| **7.0 – 7.9** | `B+` | Strong | First Class |
-| **6.0 – 6.9** | `B` | Satisfactory | Higher Second Class |
-| **5.0 – 5.9** | `C` | Needs Attention | Second Class / Needs Improvement |
-| **4.0 – 4.9** | `P` | Needs Attention | Pass Grade |
-| **< 4.0** | `F` | Critical | Academic Probation / Remedial Required |
-
----
-
-## 📋 Input Features Specification
-
-| Feature Name | Type | Range / Options | Description |
-|---|:---:|:---:|---|
-| `high_school_gpa` | Float | `0.0 – 10.0` | Previous high school academic performance |
-| `entrance_exam_score` | Float | `40 – 100` | Entrance test score / aptitude percentage |
-| `course_load` | Integer | `12 – 21` | Credit hours enrolled in current semester |
-| `attendance_rate` | Float | `40 – 100%` | Lecture and lab attendance percentage |
-| `major` | String | Engineering, Business, Arts, Science, Social Science | Academic discipline |
-| `weekly_study_hours` | Float | `0 – 45` | Self-study hours dedicated per week |
-| `class_participation` | Integer | `1 – 10` | In-class engagement & active participation rating |
-| `assignment_submission_rate` | Float | `30 – 100%` | Timely homework / assignment completion rate |
-| `extracurricular_hours` | Float | `0 – 20` | Hours dedicated to clubs, sports, or volunteering |
-| `daily_sleep_hours` | Float | `3 – 10` | Average daily sleep hours |
-| `part_time_work_hours` | Float | `0 – 35` | Weekly employment / job commitment hours |
-| `commute_time_minutes` | Float | `0 – 100` | Daily one-way travel time to campus |
-| `screen_time_hours` | Float | `0 – 14` | Daily leisure / recreational screen time |
-| `family_income_level` | String | `Low`, `Middle`, `High` | Socioeconomic tier |
-
----
-
-## 🚀 Getting Started
+## 🚀 Quickstart Guide
 
 ### 1. Prerequisites
-- **Node.js** (v18 or higher recommended)
-- **Python** (v3.9 or higher) + `pip`
-- **MongoDB** (Optional; runs seamlessly with built-in in-memory fallback if not installed)
-- **Git**
+- **Python**: 3.10+ (tested on Python 3.13)
+- **Node.js**: v18+ (tested on Node v24)
+- **MongoDB**: Optional local MongoDB daemon on port 27017 (runs seamlessly in zero-config session buffer mode if offline).
 
----
-
-### 2. Clone the Repository
+### 2. Python Environment Setup & Training
 ```bash
-git clone https://github.com/pixelrishabh/ML-mini-project.git
-cd ML-mini-project
+# 1. Install ML dependencies (scikit-learn, shap, pandas, joblib)
+python -m pip install -r model/requirements.txt
+
+# 2. Retrain the complete ML pipeline and generate all diagnostic artifacts
+python model/student_model_pipeline.py
 ```
 
----
-
-### 3. Setup Python ML Environment
+### 3. Backend Setup & Startup
 ```bash
-# Navigate to the model directory
-cd model
-
-# Install required Python libraries
-pip install -r requirements.txt
-
-# (Optional) Retrain models and re-generate diagnostic evaluation charts
-python student_model_pipeline.py
-
-# Test direct inference from command line:
-python predict.py "{\"high_school_gpa\": 8.8, \"entrance_exam_score\": 92, \"course_load\": 16, \"attendance_rate\": 95, \"major\": \"Engineering\", \"weekly_study_hours\": 20, \"class_participation\": 8, \"assignment_submission_rate\": 96, \"extracurricular_hours\": 4, \"daily_sleep_hours\": 7.5, \"part_time_work_hours\": 0, \"commute_time_minutes\": 20, \"screen_time_hours\": 3, \"family_income_level\": \"Middle\"}"
-
-cd ..
-```
-
----
-
-### 4. Setup Backend (Node.js + Express)
-```bash
-# Navigate into backend directory
+# Navigate to backend directory and install dependencies
 cd backend
-
-# Install dependencies
 npm install
 
-# Start Express server (runs on port 5000)
+# Start the Express API server (Port 5000)
 npm start
 ```
-*The backend API will start on `http://localhost:5000`.*
+The server will start at `http://localhost:5000` and automatically connect to MongoDB or default to safe in-memory session mode.
 
----
-
-### 5. Setup Frontend (React + Vite)
-Open a new terminal window:
+### 4. Frontend Setup & Startup
 ```bash
-# Navigate into frontend directory
+# In a separate terminal, navigate to frontend directory
 cd frontend
-
-# Install dependencies
 npm install
 
-# Launch Vite development server (runs on port 3000)
+# Launch Vite development server
 npm run dev
 ```
-*Open your browser and navigate to `http://localhost:3000`.*
+Open `http://localhost:3000` in your web browser.
 
 ---
 
-## 📡 REST API Reference
+## 🧪 Automated Testing
 
-### Health Check
-- **`GET /health`** or **`GET /api/health`**
-  - **Response**:
-    ```json
-    {
-      "status": "ok",
-      "stack": "MERN (MongoDB, Express, React, Node.js)",
-      "service": "Student Performance Prediction API"
-    }
-    ```
+The project includes an end-to-end automated test suite verifying data integrity, model bounds, SHAP explainability, input validation, and full-stack REST integration:
 
-### Generate Prediction
-- **`POST /api/predictions`** or **`POST /api/predict`**
-  - **Payload**:
-    ```json
-    {
-      "student_name": "Rishabh",
-      "high_school_gpa": 8.5,
-      "entrance_exam_score": 88,
-      "course_load": 15,
-      "attendance_rate": 92,
-      "major": "Engineering",
-      "weekly_study_hours": 18,
-      "class_participation": 8,
-      "assignment_submission_rate": 95,
-      "extracurricular_hours": 5,
-      "daily_sleep_hours": 7,
-      "part_time_work_hours": 0,
-      "commute_time_minutes": 25,
-      "screen_time_hours": 3.5,
-      "family_income_level": "Middle"
-    }
-    ```
-  - **Response (201 Created)**:
-    ```json
-    {
-      "success": true,
-      "message": "Prediction generated and saved successfully.",
-      "data": {
-        "predicted_cgpa": 8.42,
-        "grade_letter": "A",
-        "performance_status": "Strong"
-      }
-    }
-    ```
+```bash
+# 1. Run Python ML & Data Integrity Test Suite (8 tests)
+python tests/test_pipeline.py
 
-### Fetch Prediction Records
-- **`GET /api/predictions`**
-  - Returns the 50 most recent prediction logs.
+# 2. Run Backend REST API & Python Spawn Integration Tests (17 tests)
+node tests/test_backend.js
+```
 
-### Delete Prediction Record
-- **`DELETE /api/predictions/:id`**
-  - Deletes a specific prediction entry by ID.
+All 25 tests pass with zero errors.
 
 ---
 
-## 📊 Visualizations Included
+## 📖 Official Dataset Citation & License
 
-The `model/` directory contains generated diagnostic and evaluation plots:
-- `correlation_heatmap.png`: Inter-feature correlation matrix.
-- `feature_importance.png`: Feature weight ranking in performance prediction.
-- `model_comparison_plot.png`: Metric breakdown ($R^2$, MAE, RMSE) across models.
-- `best_model_diagnostics.png`: Residuals distribution and actual vs. predicted plot.
-- `graph1_model_comparison_ppt.png`, `graph2_actual_vs_predicted_ppt.png`, `graph3_feature_importance_ppt.png`: Formatted figures for presentation slides.
-
----
-
-## 👥 Contributors
-
-- **Rishabh** ([@pixelrishabh](https://github.com/pixelrishabh))
+- **Dataset**: UCI Student Performance Data Set
+- **Source**: [https://archive.ics.uci.edu/dataset/320/student+performance](https://archive.ics.uci.edu/dataset/320/student+performance)
+- **Official Citation**:
+  > P. Cortez and A. Silva. *Using Data Mining to Predict Secondary School Student Performance*. In A. Brito and J. Teixeira Eds., Proceedings of 5th FUture BUsiness TEChnology Conference (FUBUTEC 2008) pp. 5-12, Porto, Portugal, April, 2008, EUROSIS, ISBN 978-9077381-39-7.
+- **License**: Creative Commons Attribution 4.0 International (CC BY 4.0).
 
 ---
 
-## 📄 License
+## ⚠️ Ethical Disclaimer & Limitations
 
-This project is licensed under the [MIT License](LICENSE).
+Model predictions represent statistical cohort estimations intended strictly for early academic counseling and targeted tutoring support. They must never be interpreted as deterministic judgments of an individual student's intellectual capacity or future potential.

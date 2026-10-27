@@ -1,0 +1,245 @@
+{
+  "dataset": {
+    "name": "UCI Student Performance Dataset (Portuguese Language Course)",
+    "source": "https://archive.ics.uci.edu/dataset/320/student+performance",
+    "citation": "P. Cortez and A. Silva. Using Data Mining to Predict Secondary School Student Performance. EUROSIS, 2008.",
+    "total_records": 649,
+    "total_features": 33,
+    "target": "G3 (Final Grade, 0-20 scale)",
+    "primary_experiment_features_count": 27
+  },
+  "primary_experiment": {
+    "name": "Early Prediction (Pre-Midterm)",
+    "description": "Predicts final grade G3 using habits, parental background, and academic history prior to period exams. Excludes G1 and G2 to eliminate target leakage.",
+    "best_model": "Random Forest Regressor",
+    "test_metrics": {
+      "mae": 2.0459,
+      "rmse": 2.8198,
+      "r2": 0.1846
+    },
+    "cv_metrics": {
+      "cv_mae_mean": 2.008758995053962,
+      "cv_mae_std": 0.09624803473558079,
+      "cv_rmse_mean": 2.7287968462192724,
+      "cv_rmse_std": 0.3078454835030102,
+      "cv_r2_mean": 0.26474035336664004,
+      "cv_r2_std": 0.09997002492363931
+    },
+    "candidate_models": {
+      "Linear Regression": {
+        "cv_mae": 2.0837226961479507,
+        "cv_rmse": 2.861030110023992,
+        "cv_r2": 0.18583913927499013,
+        "test_mae": 2.1461548731022844,
+        "test_rmse": 2.873328432531033,
+        "test_r2": 0.1533781027636949
+      },
+      "Ridge Regression": {
+        "cv_mae": 2.0721673351406813,
+        "cv_rmse": 2.8522482962782423,
+        "cv_r2": 0.19103446824428366,
+        "test_mae": 2.1295521350652473,
+        "test_rmse": 2.860004653254101,
+        "test_r2": 0.1612115614843489
+      },
+      "Random Forest Regressor": {
+        "cv_mae": 2.008758995053962,
+        "cv_rmse": 2.7287968462192724,
+        "cv_r2": 0.26474035336664004,
+        "test_mae": 2.0459087402908196,
+        "test_rmse": 2.819778446126491,
+        "test_r2": 0.1846408873537776
+      },
+      "Gradient Boosting Regressor": {
+        "cv_mae": 2.1080884286285104,
+        "cv_rmse": 2.8433369889537503,
+        "cv_r2": 0.19520428953195362,
+        "test_mae": 2.1012531165183184,
+        "test_rmse": 2.8068643955334394,
+        "test_r2": 0.19209216572392196
+      }
+    },
+    "fairness_audit": {
+      "gender": {
+        "F": {
+          "label": "Female Students",
+          "sample_size": 89,
+          "reliable_sample": true,
+          "mae": 2.051,
+          "rmse": 2.937,
+          "mean_prediction_bias": -0.559,
+          "mean_actual_grade": 12.75,
+          "mean_predicted_grade": 12.19,
+          "bias_direction": "Underpredicting"
+        },
+        "M": {
+          "label": "Male Students",
+          "sample_size": 41,
+          "reliable_sample": true,
+          "mae": 2.035,
+          "rmse": 2.548,
+          "mean_prediction_bias": 0.283,
+          "mean_actual_grade": 11.49,
+          "mean_predicted_grade": 11.77,
+          "bias_direction": "Overpredicting"
+        }
+      },
+      "address": {
+        "U": {
+          "label": "Urban Address",
+          "sample_size": 94,
+          "reliable_sample": true,
+          "mae": 2.003,
+          "rmse": 2.588,
+          "mean_prediction_bias": -0.333,
+          "mean_actual_grade": 12.65,
+          "mean_predicted_grade": 12.32,
+          "bias_direction": "Underpredicting"
+        },
+        "R": {
+          "label": "Rural Address",
+          "sample_size": 36,
+          "reliable_sample": true,
+          "mae": 2.159,
+          "rmse": 3.35,
+          "mean_prediction_bias": -0.19,
+          "mean_actual_grade": 11.58,
+          "mean_predicted_grade": 11.39,
+          "bias_direction": "Underpredicting"
+        }
+      },
+      "school": {
+        "GP": {
+          "label": "Gabriel Pereira (GP)",
+          "sample_size": 87,
+          "reliable_sample": true,
+          "mae": 1.727,
+          "rmse": 2.254,
+          "mean_prediction_bias": -0.42,
+          "mean_actual_grade": 12.56,
+          "mean_predicted_grade": 12.14,
+          "bias_direction": "Underpredicting"
+        },
+        "MS": {
+          "label": "Mousinho da Silveira (MS)",
+          "sample_size": 43,
+          "reliable_sample": true,
+          "mae": 2.691,
+          "rmse": 3.709,
+          "mean_prediction_bias": -0.037,
+          "mean_actual_grade": 11.93,
+          "mean_predicted_grade": 11.89,
+          "bias_direction": "Calibrated"
+        }
+      },
+      "gender_mae_disparity_ratio": 1.008,
+      "address_mae_disparity_ratio": 1.078
+    },
+    "shap_summary": [
+      {
+        "feature": "failures",
+        "importance": 0.9534
+      },
+      {
+        "feature": "Fedu",
+        "importance": 0.3098
+      },
+      {
+        "feature": "Dalc",
+        "importance": 0.2601
+      },
+      {
+        "feature": "higher_yes",
+        "importance": 0.2143
+      },
+      {
+        "feature": "studytime",
+        "importance": 0.1827
+      },
+      {
+        "feature": "schoolsup_yes",
+        "importance": 0.1826
+      },
+      {
+        "feature": "Medu",
+        "importance": 0.1593
+      },
+      {
+        "feature": "reason_other",
+        "importance": 0.1179
+      },
+      {
+        "feature": "absences",
+        "importance": 0.0986
+      },
+      {
+        "feature": "health",
+        "importance": 0.0923
+      },
+      {
+        "feature": "Walc",
+        "importance": 0.0787
+      },
+      {
+        "feature": "freetime",
+        "importance": 0.0749
+      },
+      {
+        "feature": "traveltime",
+        "importance": 0.063
+      },
+      {
+        "feature": "age",
+        "importance": 0.0605
+      },
+      {
+        "feature": "goout",
+        "importance": 0.0498
+      }
+    ]
+  },
+  "secondary_experiment": {
+    "name": "Later Prediction (With Midterm Grades)",
+    "description": "Predicts final grade G3 using mid-term period grades (G1, G2). Demonstrates high predictive correlation as semester progresses.",
+    "best_model": "Gradient Boosting Regressor",
+    "test_metrics": {
+      "mae": 0.7311,
+      "rmse": 1.2532,
+      "r2": 0.8389
+    },
+    "candidate_models": {
+      "Linear Regression": {
+        "cv_mae": 0.8860471044510769,
+        "cv_rmse": 1.3398883614445167,
+        "cv_r2": 0.8240449594298432,
+        "test_mae": 0.7615613386752719,
+        "test_rmse": 1.204844059843957,
+        "test_r2": 0.8511391008449586
+      },
+      "Ridge Regression": {
+        "cv_mae": 0.8808324527952525,
+        "cv_rmse": 1.3354355292747058,
+        "cv_r2": 0.8251964741678304,
+        "test_mae": 0.7591375344768521,
+        "test_rmse": 1.2037103651271126,
+        "test_r2": 0.8514191095565996
+      },
+      "Random Forest Regressor": {
+        "cv_mae": 0.8447117829174772,
+        "cv_rmse": 1.3083921233201015,
+        "cv_r2": 0.8282913840709559,
+        "test_mae": 0.7165792587725118,
+        "test_rmse": 1.2131005855010908,
+        "test_r2": 0.8490918896617909
+      },
+      "Gradient Boosting Regressor": {
+        "cv_mae": 0.8375512566810099,
+        "cv_rmse": 1.2880985484139482,
+        "cv_r2": 0.8335622550208559,
+        "test_mae": 0.7310834862837011,
+        "test_rmse": 1.2532264941597204,
+        "test_r2": 0.8389435613715729
+      }
+    }
+  }
+}

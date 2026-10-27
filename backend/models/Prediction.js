@@ -5,75 +5,212 @@ const PredictionSchema = new mongoose.Schema({
     type: String,
     default: 'Student'
   },
-  high_school_gpa: {
+  // Key Academic Indicators
+  studytime: {
     type: Number,
-    required: true
+    required: true,
+    min: 1,
+    max: 4
   },
-  entrance_exam_score: {
+  failures: {
     type: Number,
-    required: true
+    required: true,
+    min: 0,
+    max: 4
   },
-  course_load: {
+  absences: {
     type: Number,
-    required: true
+    required: true,
+    min: 0,
+    max: 93
   },
-  attendance_rate: {
+  age: {
     type: Number,
-    required: true
+    default: 16,
+    min: 15,
+    max: 25
   },
-  major: {
+  higher: {
     type: String,
-    default: 'Engineering'
+    enum: ['yes', 'no'],
+    default: 'yes'
   },
-  weekly_study_hours: {
+  Medu: {
     type: Number,
-    required: true
+    min: 0,
+    max: 4,
+    default: 2
   },
-  class_participation: {
+  Fedu: {
     type: Number,
-    required: true
+    min: 0,
+    max: 4,
+    default: 2
   },
-  assignment_submission_rate: {
+  traveltime: {
     type: Number,
-    required: true
+    min: 1,
+    max: 4,
+    default: 1
   },
-  extracurricular_hours: {
-    type: Number,
-    default: 5
+  schoolsup: {
+    type: String,
+    enum: ['yes', 'no'],
+    default: 'no'
   },
-  daily_sleep_hours: {
-    type: Number,
-    default: 6.5
+  famsup: {
+    type: String,
+    enum: ['yes', 'no'],
+    default: 'yes'
   },
-  part_time_work_hours: {
-    type: Number,
-    default: 8
+  paid: {
+    type: String,
+    enum: ['yes', 'no'],
+    default: 'no'
   },
-  commute_time_minutes: {
-    type: Number,
-    default: 30
+  activities: {
+    type: String,
+    enum: ['yes', 'no'],
+    default: 'yes'
   },
-  screen_time_hours: {
+  internet: {
+    type: String,
+    enum: ['yes', 'no'],
+    default: 'yes'
+  },
+  romantic: {
+    type: String,
+    enum: ['yes', 'no'],
+    default: 'no'
+  },
+  famrel: {
     type: Number,
+    min: 1,
+    max: 5,
     default: 4
   },
-  family_income_level: {
-    type: String,
-    default: 'Middle'
-  },
-  predicted_cgpa: {
+  freetime: {
     type: Number,
-    required: true
+    min: 1,
+    max: 5,
+    default: 3
+  },
+  goout: {
+    type: Number,
+    min: 1,
+    max: 5,
+    default: 3
+  },
+  Dalc: {
+    type: Number,
+    min: 1,
+    max: 5,
+    default: 1
+  },
+  Walc: {
+    type: Number,
+    min: 1,
+    max: 5,
+    default: 1
+  },
+  health: {
+    type: Number,
+    min: 1,
+    max: 5,
+    default: 4
+  },
+  famsize: {
+    type: String,
+    enum: ['LE3', 'GT3'],
+    default: 'GT3'
+  },
+  Pstatus: {
+    type: String,
+    enum: ['T', 'A'],
+    default: 'T'
+  },
+  Mjob: {
+    type: String,
+    default: 'other'
+  },
+  Fjob: {
+    type: String,
+    default: 'other'
+  },
+  reason: {
+    type: String,
+    default: 'course'
+  },
+  guardian: {
+    type: String,
+    default: 'mother'
+  },
+
+  // Audit / Demographic context (kept separate from ML feature calculations)
+  sex: {
+    type: String,
+    enum: ['F', 'M'],
+    default: 'F'
+  },
+  address: {
+    type: String,
+    enum: ['U', 'R'],
+    default: 'U'
+  },
+  school: {
+    type: String,
+    enum: ['GP', 'MS'],
+    default: 'GP'
+  },
+
+  // Optional Midterm Period Grades for later prediction experiment
+  G1: {
+    type: Number,
+    min: 0,
+    max: 20,
+    default: null
+  },
+  G2: {
+    type: Number,
+    min: 0,
+    max: 20,
+    default: null
+  },
+  use_period_grades: {
+    type: Boolean,
+    default: false
+  },
+
+  // Prediction Output (Authentic 0 - 20 Portuguese grading scale)
+  predicted_grade: {
+    type: Number,
+    required: true,
+    min: 0,
+    max: 20
+  },
+  predicted_score: {
+    type: Number,
+    min: 0,
+    max: 20
   },
   grade_letter: {
     type: String,
-    enum: ['A+', 'A', 'B+', 'B', 'C+', 'C', 'P', 'D', 'F'],
-    default: 'B'
+    enum: ['A', 'B', 'C', 'D', 'F'],
+    default: 'C'
   },
   performance_status: {
     type: String,
-    enum: ['Outstanding', 'Strong', 'Satisfactory', 'Needs Attention', 'Critical'],
+    enum: ['Excellent', 'Good', 'Satisfactory', 'Needs Support', 'At Risk'],
     default: 'Satisfactory'
+  },
+  experiment: {
+    type: String,
+    enum: ['early_prediction', 'later_prediction'],
+    default: 'early_prediction'
+  },
+  shap_explanation: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
   },
   createdAt: {
     type: Date,

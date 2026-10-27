@@ -8,14 +8,30 @@ const connectDB = async () => {
   try {
     mongoose.set('strictQuery', false);
     await mongoose.connect(connString, {
-      serverSelectionTimeoutMS: 2000 // Quick timeout to fallback seamlessly if local MongoDB daemon isn't running
+      serverSelectionTimeoutMS: 2000
     });
     isConnectedToMongo = true;
     console.log(`[MongoDB] Connected successfully to: ${mongoose.connection.host}`);
   } catch (err) {
     isConnectedToMongo = false;
-    console.log(`[MongoDB] Warning: Local MongoDB daemon not reachable (${err.message}). Defaulting to zero-config in-memory persistence mode.`);
+    console.warn(`[MongoDB] Warning: Local MongoDB daemon not reachable (${err.message}). Running in temporary session in-memory storage mode.`);
   }
 };
 
-module.exports = { connectDB, getIsConnected: () => isConnectedToMongo, inMemoryPredictions };
+const getStorageStatus = () => {
+  return {
+    isConnected: isConnectedToMongo,
+    storageType: isConnectedToMongo ? 'MongoDB Collection' : 'In-Memory Session Mode',
+    isPersistent: isConnectedToMongo,
+    warning: isConnectedToMongo
+      ? null
+      : 'Notice: MongoDB connection is currently offline. Predictions are kept in an active in-memory session buffer and will not persist permanently across backend server restarts.'
+  };
+};
+
+module.exports = {
+  connectDB,
+  getIsConnected: () => isConnectedToMongo,
+  getStorageStatus,
+  inMemoryPredictions
+};

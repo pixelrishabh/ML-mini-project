@@ -1,177 +1,312 @@
 const path = require('path');
+const fs = require('fs');
 const { spawn } = require('child_process');
 const Prediction = require('../models/Prediction');
-const { getIsConnected, inMemoryPredictions } = require('../config/db');
+const { getIsConnected, getStorageStatus, inMemoryPredictions } = require('../config/db');
 
-// Helper to determine Grade Letter and Performance Category for CGPA (0.0 - 10.0 scale)
-const getGradeCategory = (cgpa) => {
-  if (cgpa >= 9.0) return { letter: 'A+', status: 'Outstanding' };
-  if (cgpa >= 8.0) return { letter: 'A', status: 'Strong' };
-  if (cgpa >= 7.0) return { letter: 'B+', status: 'Strong' };
-  if (cgpa >= 6.0) return { letter: 'B', status: 'Satisfactory' };
-  if (cgpa >= 5.0) return { letter: 'C', status: 'Needs Attention' };
-  if (cgpa >= 4.0) return { letter: 'P', status: 'Needs Attention' };
-  return { letter: 'F', status: 'Critical' };
-};
+// Path to Python inference script and model metadata
+const PYTHON_SCRIPT_PATH = path.join(__dirname, '..', '..', 'model', 'predict.py');
+const METADATA_PATH = path.join(__dirname, '..', '..', 'model', 'model_metadata.json');
 
-// Helper function to run Python ML model via spawn child process
+/**
+ * Spawns the Python ML process for inference.
+ * Rejects if the Python process fails or returns an error.
+ * NEVER falls back to an ad-hoc handcrafted mathematical formula.
+ */
 const runPythonML = (inputData) => {
   return new Promise((resolve, reject) => {
-    const pythonScript = path.join(__dirname, '..', '..', 'model', 'predict.py');
-    const process = spawn('python', [pythonScript, JSON.stringify(inputData)]);
+    // Sanitize input payload passed to Python
+    const processArgs = [PYTHON_SCRIPT_PATH, JSON.stringify(inputData)];
+    const pyProcess = spawn('python', processArgs);
 
     let stdoutData = '';
     let stderrData = '';
 
-    process.stdout.on('data', (data) => {
+    pyProcess.stdout.on('data', (data) => {
       stdoutData += data.toString();
     });
 
-    process.stderr.on('data', (data) => {
+    pyProcess.stderr.on('data', (data) => {
       stderrData += data.toString();
     });
 
-    process.on('close', (code) => {
-      if (code !== 0 && !stdoutData) {
-        return reject(new Error(`Python process exited with code ${code}: ${stderrData}`));
+    pyProcess.on('close', (code) => {
+      if (code !== 0 && !stdoutData.trim()) {
+        console.error(`[Python ML Error] Process exited with code ${code}. Stderr: ${stderrData}`);
+        return reject(new Error(`Python process exited with code ${code}: ${stderrData || 'Unknown error'}`));
       }
+
       try {
         const parsed = JSON.parse(stdoutData.trim());
         if (parsed.error) {
           return reject(new Error(parsed.error));
         }
-        resolve(parsed.predicted_cgpa ?? parsed.predicted_score);
+        resolve(parsed);
       } catch (err) {
-        reject(new Error(`Failed to parse Python script output: ${stdoutData}`));
+        console.error(`[Python ML Error] Failed to parse output: ${stdoutData}`);
+        return reject(new Error(`Failed to parse ML model JSON output: ${stdoutData}`));
       }
+    });
+
+    pyProcess.on('error', (err) => {
+      console.error(`[Python ML Error] Process spawn failed: ${err.message}`);
+      reject(new Error(`Failed to invoke Python runtime: ${err.message}`));
     });
   });
 };
 
-// 1. Create Prediction (POST /api/predictions or POST /api/predict)
+/**
+ * POST /api/predictions or POST /api/predict
+ * Executes machine learning inference on student attributes and stores record.
+ */
 exports.createPrediction = async (req, res) => {
   try {
-    const data = req.body;
-    const requiredFields = [
-      'high_school_gpa',
-      'entrance_exam_score',
-      'course_load',
-      'attendance_rate',
-      'weekly_study_hours',
-      'class_participation',
-      'assignment_submission_rate'
-    ];
+    const data = req.body || {};
 
-    // Validate essential required inputs
-    for (const field of requiredFields) {
-      if (data[field] === undefined || data[field] === null || data[field] === '') {
-        return res.status(400).json({ error: `Missing required field: '${field}'` });
-      }
+    // 1. Validate required primary academic inputs
+    const errors = [];
+    if (data.studytime === undefined || data.studytime === null || data.studytime === '') {
+      errors.push("Missing required field 'studytime' (weekly study time scale 1-4).");
+    } else {
+      const st = Number(data.studytime);
+      if (isNaN(st) || st < 1 || st > 4) errors.push("'studytime' must be an integer between 1 and 4.");
     }
 
+    if (data.failures === undefined || data.failures === null || data.failures === '') {
+      errors.push("Missing required field 'failures' (past class failures 0-4).");
+    } else {
+      const fl = Number(data.failures);
+      if (isNaN(fl) || fl < 0 || fl > 4) errors.push("'failures' must be an integer between 0 and 4.");
+    }
+
+    if (data.absences === undefined || data.absences === null || data.absences === '') {
+      errors.push("Missing required field 'absences' (course absences 0-93).");
+    } else {
+      const ab = Number(data.absences);
+      if (isNaN(ab) || ab < 0 || ab > 93) errors.push("'absences' must be a number between 0 and 93.");
+    }
+
+    if (data.age !== undefined && data.age !== null && data.age !== '') {
+      const age = Number(data.age);
+      if (isNaN(age) || age < 15 || age > 25) errors.push("'age' must be between 15 and 25.");
+    }
+
+    // If using later prediction with midterm grades
+    const usePeriodGrades = Boolean(data.use_period_grades);
+    if (usePeriodGrades) {
+      const g1 = Number(data.G1);
+      const g2 = Number(data.G2);
+      if (isNaN(g1) || g1 < 0 || g1 > 20) errors.push("'G1' must be a valid grade between 0 and 20.");
+      if (isNaN(g2) || g2 < 0 || g2 > 20) errors.push("'G2' must be a valid grade between 0 and 20.");
+    }
+
+    if (errors.length > 0) {
+      return res.status(400).json({
+        success: false,
+        error: "Validation error: Input data does not meet schema requirements.",
+        details: errors
+      });
+    }
+
+    // 2. Prepare payload for Python model
     const payload = {
-      student_name: data.student_name || 'Student',
-      high_school_gpa: parseFloat(data.high_school_gpa),
-      entrance_exam_score: parseFloat(data.entrance_exam_score),
-      course_load: parseInt(data.course_load, 10),
-      attendance_rate: parseFloat(data.attendance_rate),
-      major: data.major || 'Engineering',
-      weekly_study_hours: parseFloat(data.weekly_study_hours),
-      class_participation: parseInt(data.class_participation, 10),
-      assignment_submission_rate: parseFloat(data.assignment_submission_rate),
-      extracurricular_hours: parseFloat(data.extracurricular_hours || 5),
-      daily_sleep_hours: parseFloat(data.daily_sleep_hours || 6.5),
-      part_time_work_hours: parseFloat(data.part_time_work_hours || 8),
-      commute_time_minutes: parseFloat(data.commute_time_minutes || 30),
-      screen_time_hours: parseFloat(data.screen_time_hours || 4),
-      family_income_level: data.family_income_level || 'Middle'
+      student_name: (data.student_name && String(data.student_name).trim()) || 'Student',
+      age: parseInt(data.age || 16, 10),
+      studytime: parseInt(data.studytime, 10),
+      failures: parseInt(data.failures, 10),
+      absences: parseFloat(data.absences),
+      Medu: parseInt(data.Medu ?? 2, 10),
+      Fedu: parseInt(data.Fedu ?? 2, 10),
+      traveltime: parseInt(data.traveltime ?? 1, 10),
+      famrel: parseInt(data.famrel ?? 4, 10),
+      freetime: parseInt(data.freetime ?? 3, 10),
+      goout: parseInt(data.goout ?? 3, 10),
+      Dalc: parseInt(data.Dalc ?? 1, 10),
+      Walc: parseInt(data.Walc ?? 1, 10),
+      health: parseInt(data.health ?? 4, 10),
+      famsize: data.famsize || 'GT3',
+      Pstatus: data.Pstatus || 'T',
+      Mjob: data.Mjob || 'other',
+      Fjob: data.Fjob || 'other',
+      reason: data.reason || 'course',
+      guardian: data.guardian || 'mother',
+      schoolsup: data.schoolsup || 'no',
+      famsup: data.famsup || 'yes',
+      paid: data.paid || 'no',
+      activities: data.activities || 'yes',
+      nursery: data.nursery || 'yes',
+      higher: data.higher || 'yes',
+      internet: data.internet || 'yes',
+      romantic: data.romantic || 'no',
+      // Demographic fairness fields (recorded for transparency/auditing)
+      sex: data.sex || 'F',
+      address: data.address || 'U',
+      school: data.school || 'GP',
+      // Optional period grades
+      use_period_grades: usePeriodGrades,
+      G1: usePeriodGrades ? parseFloat(data.G1) : undefined,
+      G2: usePeriodGrades ? parseFloat(data.G2) : undefined
     };
 
-    // Run ML Model
-    let predictedCGPA;
+    // 3. Execute authentic ML prediction via Python inference script
+    let mlResult;
     try {
-      predictedCGPA = await runPythonML(payload);
+      mlResult = await runPythonML(payload);
     } catch (pyErr) {
-      console.warn(`[ML Fallback] Python execution notice (${pyErr.message}). Using mathematical CGPA estimator formula.`);
-      // Synthetic CGPA weighting formula aligned with 10.0 scale preprocessing_module.py
-      const incomeEffect = payload.family_income_level === 'High' ? 0.14 : payload.family_income_level === 'Middle' ? 0.07 : 0.0;
-      const rawScore = 
-        0.8 +
-        0.42 * payload.high_school_gpa +
-        0.012 * payload.entrance_exam_score +
-        0.035 * payload.weekly_study_hours +
-        0.009 * payload.attendance_rate +
-        0.009 * payload.assignment_submission_rate +
-        0.035 * payload.class_participation +
-        0.02 * payload.daily_sleep_hours +
-        0.015 * payload.extracurricular_hours -
-        0.025 * payload.part_time_work_hours -
-        0.005 * payload.commute_time_minutes -
-        0.035 * payload.screen_time_hours +
-        incomeEffect;
-
-      predictedCGPA = Math.round(Math.min(Math.max(rawScore, 0.0), 10.0) * 100) / 100;
+      console.error(`[Inference Failed] Model execution failed: ${pyErr.message}`);
+      return res.status(502).json({
+        success: false,
+        error: `Machine Learning model inference failed: ${pyErr.message}`,
+        details: "Ensure model artifacts are trained and scikit-learn/joblib are installed."
+      });
     }
 
-    const { letter, status } = getGradeCategory(predictedCGPA);
+    const predictedGrade = mlResult.predicted_grade;
+    const gradeLetter = mlResult.grade_letter || 'C';
+    const performanceStatus = mlResult.performance_status || 'Satisfactory';
 
+    // 4. Construct complete record
     const recordData = {
       ...payload,
-      predicted_cgpa: predictedCGPA,
-      predicted_score: predictedCGPA,
-      grade_letter: letter,
-      performance_status: status,
+      predicted_grade: predictedGrade,
+      predicted_score: predictedGrade,
+      grade_letter: gradeLetter,
+      performance_status: performanceStatus,
+      status_description: mlResult.status_description,
+      experiment: mlResult.experiment || (usePeriodGrades ? 'later_prediction' : 'early_prediction'),
+      shap_explanation: mlResult.shap_explanation || {},
       createdAt: new Date()
     };
 
-    let resultRecord;
+    // 5. Persist record (MongoDB if connected, otherwise temporary in-memory session)
+    let savedRecord;
+    const storageStatus = getStorageStatus();
+
     if (getIsConnected()) {
-      const newPrediction = new Prediction(recordData);
-      resultRecord = await newPrediction.save();
+      try {
+        const newRecord = new Prediction(recordData);
+        savedRecord = await newRecord.save();
+      } catch (dbErr) {
+        console.warn(`[DB Save Warning] Mongoose save failed (${dbErr.message}), keeping in session buffer.`);
+        recordData._id = `pred_${Date.now()}`;
+        inMemoryPredictions.unshift(recordData);
+        savedRecord = recordData;
+      }
     } else {
       recordData._id = `pred_${Date.now()}`;
       inMemoryPredictions.unshift(recordData);
       if (inMemoryPredictions.length > 50) inMemoryPredictions.pop();
-      resultRecord = recordData;
+      savedRecord = recordData;
     }
 
     return res.status(201).json({
       success: true,
-      message: 'Prediction generated and saved successfully.',
-      data: resultRecord
+      message: "Academic performance prediction generated successfully.",
+      data: savedRecord,
+      storage: storageStatus,
+      disclaimer: "This prediction is a statistical estimate based on historical cohort data from the UCI Student Performance Dataset (0-20 scale) and is not a deterministic evaluation of individual student capability."
     });
   } catch (error) {
-    console.error('Error creating prediction:', error);
-    return res.status(500).json({ error: error.message || 'Server error occurred during prediction.' });
+    console.error("Unhandled error in createPrediction:", error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || "An unexpected server error occurred during prediction."
+    });
   }
 };
 
-// 2. Get All Predictions (GET /api/predictions)
+/**
+ * GET /api/predictions
+ * Returns historical predictions with storage connection diagnostic metadata.
+ */
 exports.getPredictions = async (req, res) => {
   try {
+    const storage = getStorageStatus();
+    let records = [];
+
     if (getIsConnected()) {
-      const records = await Prediction.find().sort({ createdAt: -1 }).limit(50);
-      return res.status(200).json({ success: true, count: records.length, data: records });
+      records = await Prediction.find().sort({ createdAt: -1 }).limit(50);
     } else {
-      return res.status(200).json({ success: true, count: inMemoryPredictions.length, data: inMemoryPredictions });
+      records = inMemoryPredictions;
     }
+
+    return res.status(200).json({
+      success: true,
+      count: records.length,
+      storage: storage,
+      data: records
+    });
   } catch (error) {
-    return res.status(500).json({ error: 'Failed to fetch predictions history.' });
+    console.error("Error in getPredictions:", error);
+    return res.status(500).json({ success: false, error: "Failed to fetch prediction records." });
   }
 };
 
-// 3. Delete Prediction (DELETE /api/predictions/:id)
+/**
+ * DELETE /api/predictions/:id
+ * Deletes a specific prediction entry.
+ */
 exports.deletePrediction = async (req, res) => {
   try {
     const { id } = req.params;
     if (getIsConnected()) {
       await Prediction.findByIdAndDelete(id);
     } else {
-      const index = inMemoryPredictions.findIndex((item) => String(item._id) === String(id));
-      if (index !== -1) inMemoryPredictions.splice(index, 1);
+      const idx = inMemoryPredictions.findIndex((item) => String(item._id) === String(id));
+      if (idx !== -1) inMemoryPredictions.splice(idx, 1);
     }
-    return res.status(200).json({ success: true, message: 'Prediction record deleted successfully.' });
+
+    return res.status(200).json({
+      success: true,
+      message: "Prediction record deleted successfully."
+    });
   } catch (error) {
-    return res.status(500).json({ error: 'Failed to delete prediction record.' });
+    console.error("Error in deletePrediction:", error);
+    return res.status(500).json({ success: false, error: "Failed to delete prediction record." });
   }
+};
+
+/**
+ * GET /api/model/metadata
+ * Returns training results, candidate model comparisons, CV metrics,
+ * held-out test evaluations, fairness audit, and SHAP feature importances.
+ */
+exports.getModelMetadata = (req, res) => {
+  try {
+    if (!fs.existsSync(METADATA_PATH)) {
+      return res.status(404).json({
+        success: false,
+        error: "Model metadata not found. Run 'python model/student_model_pipeline.py' to generate artifacts."
+      });
+    }
+
+    const raw = fs.readFileSync(METADATA_PATH, 'utf-8');
+    const parsed = JSON.parse(raw);
+    return res.status(200).json({
+      success: true,
+      data: parsed
+    });
+  } catch (err) {
+    console.error("Error reading model metadata:", err);
+    return res.status(500).json({
+      success: false,
+      error: `Failed to load model metadata: ${err.message}`
+    });
+  }
+};
+
+/**
+ * GET /api/system/status
+ * Returns system storage, persistence, and model status.
+ */
+exports.getSystemStatus = (req, res) => {
+  const storage = getStorageStatus();
+  const modelExists = fs.existsSync(PYTHON_SCRIPT_PATH) && fs.existsSync(METADATA_PATH);
+
+  return res.status(200).json({
+    success: true,
+    storage: storage,
+    modelReady: modelExists,
+    timestamp: new Date().toISOString()
+  });
 };
