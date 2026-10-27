@@ -1,0 +1,15 @@
+{
+  "name": "student-performance-ml-project",
+  "version": "1.0.0",
+  "description": "Student Academic Performance Analysis & Prediction System",
+  "scripts": {
+    "start": "npx concurrently -k -n \"BACKEND,FRONTEND\" -c \"blue,green\" \"npm --prefix backend start\" \"npm --prefix frontend run dev\"",
+    "dev": "npx concurrently -k -n \"BACKEND,FRONTEND\" -c \"blue,green\" \"npm --prefix backend start\" \"npm --prefix frontend run dev\"",
+    "backend": "npm --prefix backend start",
+    "frontend": "npm --prefix frontend run dev",
+    "train": "python model/student_model_pipeline.py",
+    "test:python": "python tests/test_pipeline.py",
+    "test:backend": "node tests/test_backend.js",
+    "test": "python tests/test_pipeline.py && node tests/test_backend.js"
+  }
+}
